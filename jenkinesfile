@@ -1,0 +1,48 @@
+pipeline {
+    agent any 
+    tools {
+        nodejs "NodeJS_14" // Ensure Node.js tool is configured in Jenkins
+    }
+    stages {
+        stage('Install Dependencies') {
+            steps {
+                // Install Node.js dependencies
+                sh 'npm install'
+            }
+        }
+        stage('Run Tests') {
+            steps {
+                // Run tests
+                sh 'npm test'
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                echo "Building Docker Image"
+                sh 'docker build -t yourdockerhubusername/nodejs_app:${BUILD_NUMBER} .'
+            }
+        }
+        stage('Docker Login') {
+            steps {
+                withCredentials([string(credentialsId: 'DockerId', variable: 'Dockerpwd')]) {
+                    sh "docker login -u yourdockerhubusername -p ${Dockerpwd}"
+                }
+            }                
+        }
+        stage('Docker Push') {
+            steps {
+                sh 'docker push yourdockerhubusername/nodejs_app:${BUILD_NUMBER}'
+            }
+        }
+        stage('Docker Deploy') {
+            steps {
+                sh 'docker run -itd -p 3000:3000 yourdockerhubusername/nodejs_app:${BUILD_NUMBER}'
+            }
+        }
+        stage('Archiving') {
+            steps {
+                archiveArtifacts 'dist/**/*'
+            }
+        }
+    }
+}
